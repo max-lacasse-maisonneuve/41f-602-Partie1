@@ -16,12 +16,15 @@ server.use(express.static(path.join(__dirname, "public")));
 server.get("/api/films", async (req, res) => {
     try {
         const ordre = req.query.ordre || "asc";
-        const limite = parseInt(req.query.limite) || 10;
+        const limite = parseInt(req.query.limite);
 
-        const references = await db.collection("films").orderBy("titre", ordre).limit(limite).get();
+        let references = await db.collection("films").orderBy("titre", ordre);
+        if (limite) {
+            references = await references.limit(limite);
+        }
+        references = await references.get();
 
         const filmsTrouves = [];
-
         references.forEach((doc) => {
             // const docData = doc.data();
             // docData.id = doc.id;
