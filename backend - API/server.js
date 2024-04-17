@@ -1,14 +1,19 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-
 const express = require("express");
+const cors = require("cors");
+
 const server = express();
 const db = require("./data/db");
 
 //Doit être défini au début de l'application
 const dotenv = require("dotenv");
 dotenv.config();
+
+server.use(cors());
+server.use(express.json()); //Permet d'envoyer des données json dans le body
+server.use(express.urlencoded({ extended: true })); //Pour les formulaires HTML
 
 //On indique que le dossier public est accessible à tous
 server.use(express.static(path.join(__dirname, "public")));
@@ -57,8 +62,15 @@ server.get("/api/films/:id", async (req, res) => {
     return res.json(data);
 });
 
-server.post("/api/films", (req, res) => {
-    res.json("ok post");
+server.post("/api/films", async (req, res) => {
+    const donnees = req.body;
+    // valider l'info, si pas valide, on retourne une erreur
+
+    const nouveauFilm = await db.collection("films").add(donnees);
+    donnees.id = nouveauFilm.id;
+
+    res.statusCode = 200;
+    return res.json(donnees);
 });
 
 server.post("/api/films/initialiser", (req, res) => {
