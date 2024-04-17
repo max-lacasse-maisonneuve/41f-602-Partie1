@@ -1,23 +1,23 @@
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
-const express = require("express");
-const cors = require("cors");
-
-const server = express();
-const db = require("./data/db");
+const path = require("path"); //Module de nodejs servant à gérer les chemins relatifs
+const express = require("express"); //Librairie pour utiliser express
+const cors = require("cors"); //Librairie pour permettre les requêtes entre des noms de domaine différents
+const dotenv = require("dotenv"); //Librairie servant à utiliser les variables d'environnements
 
 //Doit être défini au début de l'application
-const dotenv = require("dotenv");
-dotenv.config();
+const server = express(); //Initialisation du serveur
+const db = require("./data/db"); //Fichier d'accès à la base de données
 
-server.use(cors());
+dotenv.config(); //Récupère les variables du fichier .env
+
+server.use(cors()); //Permet les requêtes provenant de d'autres noms de domaine
 server.use(express.json()); //Permet d'envoyer des données json dans le body
-server.use(express.urlencoded({ extended: true })); //Pour les formulaires HTML
+server.use(express.urlencoded({ extended: true })); //Pour les formulaires HTML x-www-urlencoded (fichiers)
 
-//On indique que le dossier public est accessible à tous
-server.use(express.static(path.join(__dirname, "public")));
+// On indique que le dossier public est accessible à tous
+server.use(express.static(path.join(__dirname, "public"))); //Permet d'accéder à tous les fichiers dans le dossier public
 
+// =====================================
+// Routes de l'API
 server.get("/api/films", async (req, res) => {
     try {
         const ordre = req.query.ordre || "asc";
