@@ -97,7 +97,7 @@ server.post(
         check("titre").escape().trim().notEmpty().isString().isLength({ max: 200 }),
         check("genres").escape().trim().isArray({ min: 0 }).notEmpty(),
         check("annee").escape().trim().notEmpty().matches("^[1-2][0-9]{3}$"),
-        check("titreVignette").escape().trim().isString().matches("^.*\.(jpg|jpeg|gif|png)$"),
+        check("titreVignette").escape().trim().isString().matches("^.*\.(jpg|jpeg|gif|png|webp)$"),
     ],
     async (req, res) => {
         const validation = validationResult(req);
