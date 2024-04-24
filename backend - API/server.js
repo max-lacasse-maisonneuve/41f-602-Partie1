@@ -3,6 +3,11 @@ const express = require("express"); //Librairie pour utiliser express
 const cors = require("cors"); //Librairie pour permettre les requêtes entre des noms de domaine différents
 const dotenv = require("dotenv"); //Librairie servant à utiliser les variables d'environnements
 const bcrypt = require("bcrypt"); //Librairie pour hasher le mot de passe
+const { check, validationResult, body, param, query } = require("express-validator"); //Librairie pour valider les données
+//La ligne ci-haut est équivalente
+// const expressValidator = require("express-validator")
+// const check = expressValidator.check;
+// const validationResult = expressValidator.validationResult;
 
 //Doit être défini au début de l'application
 const server = express(); //Initialisation du serveur
@@ -19,41 +24,62 @@ server.use(express.static(path.join(__dirname, "public"))); //Permet d'accéder 
 
 // =====================================
 // Routes de l'API
-server.get("/api/films", async (req, res) => {
-    try {
-        const ordre = req.query.ordre || "asc";
-        const limite = parseInt(req.query.limite);
+server.get(
+    "/api/films",
+    [
+        check("ordre").escape().trim().optional(true).isString().notEmpty(),
+        check("limite").escape().trim().optional(true).isInt({ min: 0 }).notEmpty(),
+    ],
+    async (req, res) => {
+        try {
+            const validation = validationResult(req);
 
-        let references = await db.collection("films").orderBy("titre", ordre);
-        if (limite) {
-            references = await references.limit(limite);
+            //Gestion des exceptions de validation
+            if (!validation.isEmpty()) {
+                console.log(validation);
+                res.statusCode = 400;
+                return res.json({ message: "Données invalides", erreurs: validation });
+            }
+
+            const ordre = req.query.ordre || "asc";
+            const limite = parseInt(req.query.limite);
+
+            let references = await db.collection("films").orderBy("titre", ordre);
+            if (limite) {
+                references = await references.limit(limite);
+            }
+            references = await references.get();
+
+            const filmsTrouves = [];
+            references.forEach((doc) => {
+                // const docData = doc.data();
+                // docData.id = doc.id;
+                const docData = { id: doc.id, ...doc.data() };
+                filmsTrouves.push(docData);
+            });
+
+            //Si aucun film trouvé, retourner erreur 404
+            if (filmsTrouves.length == 0) {
+                res.statusCode = 404;
+                return res.json({ message: "Aucun film trouvé" });
+            }
+
+            //Si tout va bien, on envoie les données
+            res.statusCode = 200;
+            return res.json(filmsTrouves);
+        } catch (erreur) {
+            res.statusCode = 500;
+            return res.json({ message: erreur.message });
         }
-        references = await references.get();
-
-        const filmsTrouves = [];
-        references.forEach((doc) => {
-            // const docData = doc.data();
-            // docData.id = doc.id;
-            const docData = { id: doc.id, ...doc.data() };
-            filmsTrouves.push(docData);
-        });
-
-        //Si aucun film trouvé, retourner erreur 404
-        if (filmsTrouves.length == 0) {
-            res.statusCode = 404;
-            return res.json({ message: "Aucun film trouvé" });
-        }
-
-        //Si tout va bien, on envoie les données
-        res.statusCode = 200;
-        return res.json(filmsTrouves);
-    } catch (erreur) {
-        res.statusCode = 500;
-        return res.json({ message: erreur.message });
     }
-});
+);
 
-server.get("/api/films/:id", async (req, res) => {
+server.get("/api/films/:id", [check("id").escape().trim().notEmpty().isString()], async (req, res) => {
+    const validation = validationResult(req);
+    if (!validation.isEmpty()) {
+        res.statusCode = 400;
+        return res.json({ message: "Données invalides", erreurs: validation });
+    }
     const id = req.params.id;
 
     const reference = await db.collection("films").doc(id).get();
@@ -65,16 +91,31 @@ server.get("/api/films/:id", async (req, res) => {
     return res.json(data);
 });
 
-server.post("/api/films", async (req, res) => {
-    const donnees = req.body;
-    // valider l'info, si pas valide, on retourne une erreur
+server.post(
+    "/api/films",
+    [
+        check("titre").escape().trim().notEmpty().isString().isLength({ max: 200 }),
+        check("genres").escape().trim().isArray({ min: 0 }).notEmpty(),
+        check("annee").escape().trim().notEmpty().matches("^[1-2][0-9]{3}$"),
+        check("titreVignette").escape().trim().isString().matches("^.*\.(jpg|jpeg|gif|png)$"),
+    ],
+    async (req, res) => {
+        const validation = validationResult(req);
+        if (!validation.isEmpty()) {
+            res.statusCode = 400;
+            return res.json({ message: "Données invalides", errors: validation.errors });
+        }
 
-    const nouveauFilm = await db.collection("films").add(donnees);
-    donnees.id = nouveauFilm.id;
+        const donnees = req.body;
+        // valider l'info, si pas valide, on retourne une erreur
 
-    res.statusCode = 200;
-    return res.json(donnees);
-});
+        const nouveauFilm = await db.collection("films").add(donnees);
+        donnees.id = nouveauFilm.id;
+
+        res.statusCode = 200;
+        return res.json(donnees);
+    }
+);
 
 server.post("/api/films/initialiser", (req, res) => {
     try {
