@@ -84,7 +84,7 @@ server.get("/api/films/:id", [check("id").escape().trim().notEmpty().isString()]
 
     const reference = await db.collection("films").doc(id).get();
     // const reference = await db.collection("films").where("courriel","=",req.body.courriel ).get();
-    const data = reference.data();
+    const data = await reference.data();
     data.id = id;
 
     res.statusCode = 200;
@@ -97,7 +97,7 @@ server.post(
         check("titre").escape().trim().notEmpty().isString().isLength({ max: 200 }),
         check("genres").escape().trim().isArray({ min: 0 }).notEmpty(),
         check("annee").escape().trim().notEmpty().matches("^[1-2][0-9]{3}$"),
-        check("titreVignette").escape().trim().isString().matches("^.*\.(jpg|jpeg|gif|png|webp)$"),
+        check("titreVignette").escape().trim().isString().matches("^.*.(jpg|jpeg|gif|png|webp)$"),
     ],
     async (req, res) => {
         const validation = validationResult(req);
@@ -194,7 +194,17 @@ server.post("/api/utilisateurs/connexion", async (req, res) => {
         //On retourne une erreur 500 et un message d'erreur
     }
 });
+server.delete("/api/films/:id", async (req, res) => {
+    const id = req.params.id;
+    const ref = await db.collection("films").doc(id).get();
 
+    if (ref.exists) {
+        await db.collection("films").doc(id).delete();
+        //Message de succes
+    } else {
+        //Message d'erreur
+    }
+});
 //Gestion de l'erreur 404
 server.use((req, res) => {
     res.statusMessage = "Ressource non trouvée";
