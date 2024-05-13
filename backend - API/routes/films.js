@@ -10,7 +10,7 @@ const { check, validationResult } = require("express-validator");
 router.get(
     "/",
     [
-        check("limit").escape().trim().optional(true).isInt(),
+        check("limit").escape().trim().optional(true).isInt({ min: 0 }),
         check("orderDirection").escape().trim().isString().optional(true),
         check("orderBy").escape().trim().isString().optional(true),
     ],
